@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["@prisma/client", "prisma"],
+  experimental: {
+    cacheComponents: true, // Cache Componentsの有効化
+  },
 };
-
 export default nextConfig;

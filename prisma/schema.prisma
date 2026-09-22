@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+// generator client {
+//   provider = "prisma-client"
+//   output   = "../lib/generated/prisma"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+// }
+// prisma/schema.prisma
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// // datasource db {
+// //   provider = "sqlite"
+// //   url      = "file:./dev.db" // 💡 v6ではここに直接書いて大丈夫です！
+// // }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = "file:./dev.db" // 💡 v6ではここに直接書いて大丈夫です！
+// }
+ generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"] // Neon アダプターを使用するために必須
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  name        String?
+  password    String? // Credentialsユーザーは必須、GitHubユーザーはnull
+  role        Role          @default(USER) // USER(一般参加者), ADMIN(食堂運営者), DONOR(寄付者)
+  bookings    Booking[]
+  waitingList WaitingList[]
+  createdAt   DateTime      @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+  DONOR
+}
+
+// 子ども食堂のイベント（開催情報）
+model CafeteriaEvent {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  date          DateTime
+  capacity      Int // 定員（例: 30名）
+  bookedCount   Int            @default(0) // 現在の予約総数
+  bookings      Booking[]
+  waitingList   WaitingList[]
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  isDeletedSoon Boolean        @default(false)
+  deletedAt     DateTime?
+}
+
+// 予約明細（誰が・どのイベントに・何人分予約したか）
+model Booking {
+  id               String   @id @default(cuid())
+  userId           String
+  cafeteriaEventId String
+  guestCount       Int // 予約人数
+  attended         Boolean        @default(false) // 変更点: 出席状態を管理するフラグを追加 (デフォルト: 未出席)
+  createdAt        DateTime @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cafeteriaEvent CafeteriaEvent @relation(fields: [cafeteriaEventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cafeteriaEventId]) // 1つのイベントに対して1人1回まで予約可能
+}
+
+model WaitingList {
+  id               String   @id @default(cuid())
+  userId           String
+  cafeteriaEventId String
+  createdAt        DateTime @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cafeteriaEvent CafeteriaEvent @relation(fields: [cafeteriaEventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cafeteriaEventId]) // 同一イベントへの二重登録を防止
+  @@index([cafeteriaEventId])
+  @@index([userId])
+}
+
+model Notification {
+  id               String         @id @default(cuid())
+  cafeteriaEventId String
+  title            String
+  content          String
+  createdAt        DateTime       @default(now())
+  cafeteriaEvent   CafeteriaEvent @relation(fields: [cafeteriaEventId], references: [id], onDelete: Cascade)
+}
