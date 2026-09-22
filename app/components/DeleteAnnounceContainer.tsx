@@ -4,10 +4,13 @@ import { notFound, redirect } from "next/navigation";
 import DeleteAnnounceForm from "./DeleteAnnounceForm";
 
 interface DeleteAnnounceContainerProps {
-  id: string;
+  params: Promise<{ id: string }>;
 }
 
-export default async function DeleteAnnounceContainer({ id }: DeleteAnnounceContainerProps) {
+export default async function DeleteAnnounceContainer({ params }: DeleteAnnounceContainerProps) {
+  // <Suspense> の内側（このサーバーコンポーネント内）で params を await 解決する
+  const { id } = await params;
+
   const session = await auth();
 
   // 未ログイン
