@@ -3,7 +3,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { sendBookingConfirmationEmail, sendCancellationEmail } from "@/lib/mail";
 
@@ -29,7 +28,7 @@ export async function controlBooking(
 ): Promise<BookingActionState> {
   const session = await auth();
 
-  if (!session?.user.id) {
+  if (!session?.user?.id) {
     return { success: false, message: "予約を確定するにはログインが必要です。" };
   }
 
@@ -44,8 +43,6 @@ export async function controlBooking(
       errors: { guestCount: ["正しい人数を選択してください。"] },
     };
   }
-
-  let isSuccess = false;
 
   try {
     let targetEvent: { title: string; date: Date } | null = null;
@@ -111,9 +108,14 @@ export async function controlBooking(
     purgeCacheTag("events");
 
     revalidatePath("/profile");
+    revalidatePath(`/events/${eventId}`); // ※イベント詳細ページのキャッシュも更新
     revalidatePath("/");
     
-    isSuccess = true;
+    // 💡 redirect は使わずに State を返す
+    return {
+      success: true,
+      message: "参加予約が正常に確定しました！",
+    };
   } catch (error: any) {
     console.error("Booking transaction error:", error);
     return {
@@ -121,13 +123,6 @@ export async function controlBooking(
       message: error.message || "予期せぬエラーで予約に失敗しました。",
     };
   }
-
-  // 💡 ポイント: redirect は必ず try-catch の外側で呼ぶ
-  if (isSuccess) {
-    redirect(`?status=success&message=${encodeURIComponent("参加予約が正常に確定しました！")}`);
-  }
-
-  return { success: false, message: "処理を完了できませんでした。" };
 }
 
 export async function deleteBooking(
@@ -146,8 +141,6 @@ export async function deleteBooking(
   if (!eventId) {
     return { success: false, message: "イベントIDが正しくありません。" };
   }
-
-  let isSuccess = false;
 
   try {
     let canceledEventTitle: string | null = null;
@@ -184,9 +177,14 @@ export async function deleteBooking(
     purgeCacheTag("events");
 
     revalidatePath("/profile");
+    revalidatePath(`/events/${eventId}`);
     revalidatePath("/");
 
-    isSuccess = true;
+    // 💡 redirect は使わずに State を返す
+    return {
+      success: true,
+      message: "予約をキャンセルしました。",
+    };
   } catch (error: any) {
     console.error("Cancel booking error:", error);
     return {
@@ -194,11 +192,4 @@ export async function deleteBooking(
       message: error.message || "予期せぬエラーでキャンセルの処理に失敗しました。",
     };
   }
-
-  // 💡 ポイント: try-catch の外側で呼ぶ
-  if (isSuccess) {
-    redirect(`?status=success&message=${encodeURIComponent("予約をキャンセルしました。")}`);
-  }
-
-  return { success: false, message: "処理を完了できませんでした。" };
 }
