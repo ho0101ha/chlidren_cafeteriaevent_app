@@ -144,7 +144,6 @@ export default async function AsyncEvents({ params }: EventPageProps) {
                 このイベントは <span className="font-bold text-emerald-600">{existingBooking.guestCount}名</span> で予約されています。
               </p>
             </div>
-            {/* useSearchParams を使う BookingForm を Suspense でラップ */}
             <Suspense fallback={<div className="text-sm text-gray-500">フォーム読み込み中...</div>}>
               <BookingForm
                 eventId={event.id}

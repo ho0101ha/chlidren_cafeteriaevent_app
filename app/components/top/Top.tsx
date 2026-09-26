@@ -4,6 +4,7 @@ import {prisma} from "@/lib/prisma";
 import {cacheTag} from "next/cache";
 import Link from "next/link";
 import {EventFilterForm} from "../EventFilterForm";
+import { Pagination } from "../Pagination";
 
 async function getUserBookingEventIds(userId: string) {
   "use cache";
@@ -34,7 +35,7 @@ async function getUserRole(userId: string) {
   });
   return user?.role;
 }
-
+const ITEMS_PER_PAGE = 6;
 export default async function Top({
   searchParams,
 }: {
@@ -42,10 +43,12 @@ export default async function Top({
     search?: string;
     status?: string;
     sort?: string;
+    page?:string;
   }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const {search, status, sort} = resolvedSearchParams;
+  const {search, status, sort,page} = resolvedSearchParams;
+  const currentPage = Math.max(1, parseInt(page || "1", 10));
   const allEvents = await getCacheAllEvents();
   const session = await auth();
   const userId = session?.user?.id;
@@ -81,6 +84,10 @@ export default async function Top({
     }
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
+  const totalEvents = events.length;
+  const  totalPages = Math.ceil(totalEvents/ITEMS_PER_PAGE);
+  const paginatedEvents = events.slice((currentPage -1)*ITEMS_PER_PAGE,
+  currentPage*ITEMS_PER_PAGE)
   return (
     <div className="px-3 md:px-0 space-y-4 md:space-y-6">
       {/* ヘッダータイトル領域 */}
@@ -92,14 +99,15 @@ export default async function Top({
         </h2>
       </div>
       <EventFilterForm />
-      {events.length === 0 ? (
+      {paginatedEvents.length === 0 ? (
         /* 該当なし時の空表示 */
         <div className="bg-white p-8 md:p-12 text-center rounded-xl border border-zinc-100 text-sm md:text-base text-zinc-500">
           現在、予定されている子ども食堂イベントはありません。
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {events.map((event) => {
+        <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {paginatedEvents.map((event) => {
             const remainingSeats = event.capacity - event.bookedCount;
             const isFull = remainingSeats <= 0;
             const isAlreadyBooked = myBookingEventIds.has(event.id);
@@ -196,6 +204,9 @@ export default async function Top({
             );
           })}
         </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages}/>
+        </>
+  
       )}
     </div>
   );
