@@ -3,8 +3,11 @@ import Link from "next/link";
 import { DashboardStatsSection } from "../components/admin/DashboardStatsSection";
 import { EventsListSection } from "../components/admin/EventsListSection";
 
+interface PageProps  {
+  searchParams: Promise<{ page?: string }>;
+};
 
-export default function AdminDashboardPage() {
+export default function AdminDashboardPage({searchParams}:PageProps) {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -48,7 +51,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <Suspense >
-            <EventsListSection />
+            <EventsListSection searchParams={searchParams}/>
           </Suspense>
         </section>
       </div>
