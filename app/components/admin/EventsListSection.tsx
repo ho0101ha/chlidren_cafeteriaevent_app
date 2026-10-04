@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { cacheTag } from "next/cache";
 import { DeleteEventButton } from "./DeleteEventButton";
+import { Pagination } from "../Pagination";
 
 /**
  * イベント一覧データの取得（キャッシュ対象）
@@ -46,7 +47,15 @@ function getEventStatus(event: { date: Date; isCanceled?: boolean }) {
   };
 }
 
-export async function EventsListSection() {
+
+const ITEMS_PER_PAGE = 10;
+interface EventsListSectionProps{
+  searchParams?:Promise<{
+    page?:string;
+  }>
+
+}
+export async function EventsListSection({searchParams}:EventsListSectionProps) {
   // 1. 管理者認証チェック
   const session = await auth();
   if (!session?.user?.id) {
@@ -62,7 +71,10 @@ export async function EventsListSection() {
     redirect("/");
   }
 
-  // 2. イベントデータの取得
+
+  const resolvedSearchParams = searchParams ? await searchParams :{};
+  const currentPage = Math.max(1, parseInt(resolvedSearchParams.page || "1", 10));
+  //  イベントデータの取得
   const events = await getAdminEvents();
 
   if (events.length === 0) {
@@ -71,13 +83,17 @@ export async function EventsListSection() {
         登録されているイベントはありません。
       </div>
     );
+
   }
 
+  const totalEvents = events.length;
+  const totalPages = Math.ceil(totalEvents/ITEMS_PER_PAGE);
+  const paginatedEvents = events.slice((currentPage -1) * ITEMS_PER_PAGE,currentPage * ITEMS_PER_PAGE);
   return (
     <>
       {/* スマホ標準レイアウト: カードリスト（md 未満で表示） */}
       <div className="block md:hidden divide-y divide-zinc-200">
-        {events.map((event) => {
+        {paginatedEvents.map((event) => {
           const eventTotalGuests = event.bookings.reduce(
             (sum, b) => sum + b.guestCount,
             0
@@ -159,7 +175,7 @@ export async function EventsListSection() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-zinc-800">
-            {events.map((event) => {
+            {paginatedEvents.map((event) => {
               const eventTotalGuests = event.bookings.reduce(
                 (sum, b) => sum + b.guestCount,
                 0
@@ -222,6 +238,7 @@ export async function EventsListSection() {
           </tbody>
         </table>
       </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} />
     </>
   );
 }

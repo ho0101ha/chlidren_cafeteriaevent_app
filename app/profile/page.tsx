@@ -1,12 +1,14 @@
 import React, { Suspense } from 'react'
 import { ProfileSection } from '@/app/components/ProfileSection'
 
-
-function ProfilePage() {
+interface PageProps  {
+  searchParams: Promise<{ page?: string }>;
+};
+function ProfilePage({ searchParams }: PageProps){
   return (
     <div>
         <Suspense>
-        <ProfileSection/>
+        <ProfileSection searchParams={searchParams}/>
         </Suspense>
       
         </div>
